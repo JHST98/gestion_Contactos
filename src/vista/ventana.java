@@ -10,18 +10,20 @@ import java.util.*;
 
 /**
  * Vista (GUI) del sistema. Pública para que el controlador pueda acceder a componentes.
+ * Incluye campo de búsqueda txtBuscar.
  */
 public class ventana extends JFrame {
 
     // Componentes públicos accesibles desde el controlador
-    public JTextField txtNombre, txtTelefono, txtEmail;
+    public JTextField txtNombre, txtTelefono, txtEmail, txtBuscar;
     public JCheckBox chkFavorito;
     public JComboBox<String> cmbCategoria, cmbIdioma;
     public JTable tablaContactos;
     public JButton btnAgregar, btnEliminar, btnExportar, btnEditar;
     public JLabel lblTotal, lblFavoritos, lblCategoria;
 
-    private final Map<String, Map<String, String>> idiomas = new HashMap<>();
+    // Mapa de idiomas (expuesto para reutilización en controlador)
+    public final Map<String, Map<String, String>> idiomas = new HashMap<>();
     private final JProgressBar progressBar = new JProgressBar();
 
     public ventana() {
@@ -31,7 +33,7 @@ public class ventana extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        inicializarIdiomas(); // prepara textos para idiomas
+        inicializarIdiomas();
         JTabbedPane tabs = new JTabbedPane();
         tabs.add("Contactos", crearPanelContactos());
         tabs.add("Estadísticas", crearPanelEstadisticas());
@@ -53,7 +55,7 @@ public class ventana extends JFrame {
     private JPanel crearPanelContactos() {
         JPanel panel = new JPanel(new BorderLayout(8, 8));
 
-        // PANEL FORMULARIO (vertical)
+        // PANEL FORMULARIO (izquierda)
         JPanel form = new JPanel();
         form.setLayout(new GridBagLayout());
         form.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -63,15 +65,25 @@ public class ventana extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.gridx = 0; gbc.gridy = 0;
 
-        // Idioma (arriba)
-        JPanel top = new JPanel(new BorderLayout());
+        // TOP: idioma + buscador
+        JPanel top = new JPanel(new BorderLayout(8,0));
+        JPanel idiomaPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         JLabel lblIdioma = new JLabel("Idioma:");
         cmbIdioma = new JComboBox<>(new String[]{"Español", "Inglés", "Francés"});
-        top.add(lblIdioma, BorderLayout.WEST);
-        top.add(cmbIdioma, BorderLayout.EAST);
+        idiomaPanel.add(lblIdioma); idiomaPanel.add(cmbIdioma);
+        top.add(idiomaPanel, BorderLayout.WEST);
+
+        // Campo de búsqueda (nuevo) -- se añade aquí y es público
+        JPanel buscadorPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        JLabel lblBuscar = new JLabel("Buscar:");
+        txtBuscar = new JTextField(18);
+        buscadorPanel.add(lblBuscar); buscadorPanel.add(txtBuscar);
+        top.add(buscadorPanel, BorderLayout.EAST);
+
         panel.add(top, BorderLayout.NORTH);
 
-        // Campos
+        // Campos del formulario (en form)
+        gbc.gridx = 0; gbc.gridy = 0;
         form.add(new JLabel("Nombre:"), gbc);
         gbc.gridx = 1;
         txtNombre = new JTextField(18); form.add(txtNombre, gbc);
@@ -138,18 +150,17 @@ public class ventana extends JFrame {
     /**
      * Actualiza etiquetas de estadísticas (vista).
      */
-    public void actualizarEstadisticas(java.util.List<persona> contactos) {
-        lblTotal.setText("Total de contactos: " + contactos.size());
-        long favs = contactos.stream().filter(persona::isFavorito).count();
+    public void actualizarEstadisticas(java.util.List<persona> contactosList) {
+        lblTotal.setText("Total de contactos: " + contactosList.size());
+        long favs = contactosList.stream().filter(persona::isFavorito).count();
         lblFavoritos.setText("Favoritos: " + favs);
         Set<String> cats = new LinkedHashSet<>();
-        for (persona p : contactos) cats.add(p.getCategoria());
+        for (persona p : contactosList) cats.add(p.getCategoria());
         lblCategoria.setText("Categorías: " + (cats.isEmpty() ? "-" : String.join(", ", cats)));
     }
 
     /**
      * Inicializa mapas de traducción.
-     * Usamos HashMap y put(...) para no depender de Map.of con >10 pares.
      */
     private void inicializarIdiomas() {
         Map<String, String> es = new HashMap<>();
@@ -175,12 +186,10 @@ public class ventana extends JFrame {
         fr.put("Nombre", "Nom"); fr.put("Teléfono", "Téléphone"); fr.put("Email", "Courriel");
         fr.put("Categorías", "Catégories"); fr.put("Total", "Contacts totaux"); fr.put("Favoritos","Favoris");
         idiomas.put("Francés", fr);
-
-        // Aplica el listener de idioma en el controlador (se registra desde logica_ventana)
     }
 
     /**
-     * Cambia textos en tiempo real (usar desde controlador o desde action listener del combo).
+     * Cambia textos en tiempo real (llamado por el controlador cuando cambia idioma).
      */
     public void cambiarIdioma(String idioma) {
         Map<String, String> lang = idiomas.get(idioma);

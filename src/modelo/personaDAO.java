@@ -6,7 +6,7 @@ import java.util.List;
 
 /**
  * DAO: lectura y escritura simple en CSV (datosContactos.csv).
- * Usa ';' como separador para evitar conflicto con comas.
+ * Guarda y carga la lista completa. Métodos sincronizados para seguridad en concurrencia.
  */
 public class personaDAO {
 
@@ -18,8 +18,9 @@ public class personaDAO {
 
     /**
      * Guarda la lista completa de contactos (reescribe el archivo).
+     * Synchronized para evitar escrituras concurrentes.
      */
-    public void guardarContactos(List<persona> contactos) throws IOException {
+    public synchronized void guardarContactos(List<persona> contactos) throws IOException {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(archivo))) {
             for (persona p : contactos) {
                 bw.write(p.toString());
@@ -56,7 +57,7 @@ public class personaDAO {
     /**
      * Elimina el archivo de persistencia (si existe).
      */
-    public boolean eliminarArchivo() {
+    public synchronized boolean eliminarArchivo() {
         if (archivo.exists()) {
             return archivo.delete();
         }
